@@ -7,3 +7,4 @@ max_number = max(numbers)
 
 # Print the result
 print(min_number, max_number)
+# Print the resulte
