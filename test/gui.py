@@ -20,7 +20,7 @@ window.configure(bg="#e6e6fa")  # Changed the background color to navy blue
 window.resizable(width=False,height=False)
 
 mixer.init()
-
+#NOUR
 #icon
 image_icon=PhotoImage(file="media_player/image/icons8-music-200.png")
 window.iconphoto(False,image_icon)
