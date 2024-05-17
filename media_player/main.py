@@ -61,11 +61,11 @@ def toggle_repeat_mode():
         repeat_button.config(image=repeat_all_img)
  
 #icon
-image_icon=PhotoImage(file="media_player\image\icons8-pause-button-50.png")
+image_icon=PhotoImage(file="media_player/image/icons8-music-50.png")
 window.iconphoto(False,image_icon)
 
 #logo
-#logo=PhotoImage(file="pngegg.png")
+#logo=PhotoImage(file="media_player/image/icons8-music-50.png")
 #Label(window,image=logo,bg="#D4D1FA").place(x=65,y=115)
 
 #buttons
