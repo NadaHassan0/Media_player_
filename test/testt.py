@@ -13,68 +13,62 @@ from PIL import Image, ImageTk
 from threading import *
 import time
 import math
+import wave
+import numpy as np
+import tkinter.filedialog as filedialog
+import os
+import pygame
+import pygame
+import tkinter as tk
+from tkinter import filedialog
 
-window = Tk()
-window.title("Music player")
+import tkinter as tk
+from tkinter import filedialog, Listbox, PhotoImage, Menu
+import pygame
 
-myMenu = Menu(window)
-window.config(menu=myMenu)
-controlSongMenu = Menu(myMenu)
-myMenu.add_cascade(label="Menu", menu=controlSongMenu)
-controlSongMenu.add_command(label="Add songs")
-controlSongMenu.add_command(label="Delete song")
+pygame.mixer.init()
 
-window.geometry("800x600")
-window.configure(bg="#15253F")
-window.resizable(width=False, height=False)
+def add_songs():
+    song_paths = filedialog.askopenfilenames(title="Select Songs", filetypes=[("MP3 Files", "*.mp3")])
+    for song in song_paths:
+        songs_listbox.insert(tk.END, song)
 
-mixer.init()
+def delete_song():
+    selected_song_index = songs_listbox.curselection()
+    if selected_song_index:
+        songs_listbox.delete(selected_song_index)
 
+def play_song():
+    selected_song_index = songs_listbox.curselection()
+    if selected_song_index:
+        song_path = songs_listbox.get(selected_song_index)
+        pygame.mixer.music.load(song_path)
+        pygame.mixer.music.play()
+
+def stop_song():
+    pygame.mixer.music.stop()
+
+def pause_song():
+    pygame.mixer.music.pause()
+
+def resume_song():
+    pygame.mixer.music.unpause()
 
 def volume(value):
-    pygame.mixer.music.set_volume(value)
-    if value > 0:
+    pygame.mixer.music.set_volume(float(value))
+    if float(value) > 0:
         vol_button.config(image=vol_img)
     else:
         vol_button.config(image=mute_img)
 
-
 def mute():
-    volume_value = slider.get()
-    if volume_value > 0:
+    if slider.get() > 0:
+        previous_volume = slider.get()
         slider.set(0)
         vol_button.config(image=mute_img)
     else:
         slider.set(0.5)
         vol_button.config(image=vol_img)
-
-
-
-image_icon = PhotoImage(file="media_player/image/icons8-pause-button-50.png")
-window.iconphoto(False, image_icon)
-
-slider = customtkinter.CTkSlider(master=window, from_=0, to=1, command=volume, width=230)
-slider.place(relx=0.8, rely=0.8, anchor=tkinter.CENTER)
-
-play_button = PhotoImage(file="media_player/image/icons8-play-button-50.png")
-Button(window, image=play_button, bg="#15253F", bd=0).place(x=170, y=450)
-
-stop_button = PhotoImage(file="media_player/image/icons8-stop-circled-50.png")
-Button(window, image=stop_button, bg="#15253F", bd=0).place(x=100, y=450)
-
-resume_button = PhotoImage(file="media_player/image/icons8-pause-button-50.png")
-Button(window, image=resume_button, bg="#15253F", bd=0).place(x=240, y=450)
-
-vol_img = ImageTk.PhotoImage(file='media_player/image/icons8-speaker-30.png')
-mute_img = ImageTk.PhotoImage(file='media_player/image/icons8-mute-30.png')
-
-vol_button = Button(window, image=vol_img, command=mute, bg='#15253F', bd=0)
-vol_button.place(relx=0.61, rely=0.8, anchor=tkinter.CENTER)
-
-progressbar = customtkinter.CTkProgressBar(master=window, progress_color='#D0D7E1', width=500)
-progressbar.place(relx=0.5, rely=0.66, anchor=tkinter.CENTER)
-
-
 
 def toggle_repeat_mode():
     global repeat_mode
@@ -85,16 +79,70 @@ def toggle_repeat_mode():
         repeat_mode = "Repeat All"
         repeat_button.config(image=repeat_all_img)
 
+# Create the main window
+window = tk.Tk()
+window.title("Music Player")
+window.geometry("800x600")
+window.configure(bg="#15253F")
+window.resizable(width=False, height=False)
 
-# Define repeat mode variable and set initial mode
+# Menu
+myMenu = Menu(window)
+window.config(menu=myMenu)
+controlSongMenu = Menu(myMenu)
+myMenu.add_cascade(label="Menu", menu=controlSongMenu)
+controlSongMenu.add_command(label="Add songs", command=add_songs)
+controlSongMenu.add_command(label="Delete song", command=delete_song)
+controlSongMenu.add_command(label="Record song")
+
+# Icon
+image_icon = PhotoImage(file="media_player/image/icons8-music-50.png")
+window.iconphoto(False, image_icon)
+
+# Songs listbox
+songs_listbox = Listbox(window, bg="#15253F", fg="white", selectbackground="gray")
+songs_listbox.pack(fill=tk.BOTH, expand=True)
+
+# Volume Slider
+slider = customtkinter.CTkSlider(master=window, from_=0, to=1, command=volume, width=150)
+slider.place(relx=0.2, rely=0.65, anchor=tk.CENTER)
+slider.set(0.5)  # Set initial volume to 50%
+
+# Buttons
+add_song_button = PhotoImage(file="media_player/image/icons8-add-song-100.png")
+tk.Button(window, image=add_song_button, bg="#15253F", bd=0, command=add_songs).place(x=120, y=150)
+
+play_button = PhotoImage(file="media_player/image/icons8-play-button-50.png")
+tk.Button(window, image=play_button, bg="#15253F", bd=0, command=play_song).place(x=375, y=500)
+
+stop_button = PhotoImage(file="media_player/image/icons8-stop-circled-50.png")
+tk.Button(window, image=stop_button, bg="#15253F", bd=0, command=stop_song).place(x=300, y=500)
+
+pause_button = PhotoImage(file="media_player/image/icons8-pause-button-50.png")
+tk.Button(window, image=pause_button, bg="#15253F", bd=0, command=pause_song).place(x=450, y=500)
+
+#resume_button = PhotoImage(file="media_player/image/icons8-resume-button-50.png")
+#tk.Button(window, image=resume_button, bg="#15253F", bd=0, command=resume_song).place(x=450, y=500)
+
+next_button = PhotoImage(file="media_player/image/icons8-forward-30.png")
+tk.Button(window, image=next_button, bg="#15253F", bd=0).place(x=520, y=510)
+
+previous_button = PhotoImage(file="media_player/image/icons8-previous-30.png")
+tk.Button(window, image=previous_button, bg="#15253F", bd=0).place(x=250, y=510)
+
+progressbar = customtkinter.CTkProgressBar(master=window, progress_color='#D0D7E1', width=570)
+progressbar.place(relx=0.5, rely=0.75, anchor=tk.CENTER)
+
+vol_img = ImageTk.PhotoImage(file='media_player/image/icons8-speaker-30.png')
+mute_img = ImageTk.PhotoImage(file='media_player/image/icons8-mute-30.png')
+
+vol_button = tk.Button(window, image=vol_img, command=mute, bg='#15253F', bd=0)
+vol_button.place(relx=0.05, rely=0.65, anchor=tk.CENTER)
+
 repeat_mode = "Repeat All"
-
-# Load images for repeat modes
 repeat_all_img = ImageTk.PhotoImage(file='media_player/image/icons8-repeat-30.png')
 repeat_one_img = ImageTk.PhotoImage(file='media_player/image/icons8-repeat-one-30.png')
-
-# Create button for toggling repeat mode
-repeat_button = Button(window, image=repeat_all_img, command=toggle_repeat_mode, bg="#15253F", bd=0)
-repeat_button.place(x=300, y=460)  # Adjust position as needed
+repeat_button = tk.Button(window, image=repeat_all_img, command=toggle_repeat_mode, bg="#15253F", bd=0)
+repeat_button.place(x=600, y=490)
 
 window.mainloop()
