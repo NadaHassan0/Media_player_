@@ -25,11 +25,27 @@ from tkinter import filedialog
 import tkinter as tk
 from tkinter import filedialog, Listbox, PhotoImage, Menu
 import pygame
+import tkinter
+from tkinter.ttk import Progressbar
+import customtkinter
+import pygame
+from PIL import Image, ImageTk
+from threading import *
+import time
+import math
+
 
 pygame.mixer.init()
 
+list_of_songs = ['media_player/songs_listbox/VivaLaVida.wav'] # Add more songs into this list, make sure they are .wav and put into the music Directory.
+list_of_covers = ['media_player/image/photo_2024-05-21_13-52-22.jpg'] # Add more JPEGS into the img directory, You can download city from my Github as a starting point.
+n = 0
+
 def add_songs():
-    song_paths = filedialog.askopenfilenames(title="Select Songs", filetypes=[("MP3 Files", "*.mp3")])
+    song_paths = filedialog.askopenfilenames(
+        title="Select Songs", 
+        filetypes=[("Audio Files", "*.mp3 *.wav"), ("MP3 Files", "*.mp3"), ("WAV Files", "*.wav")]
+    )
     for song in song_paths:
         songs_listbox.insert(tk.END, song)
 
@@ -38,12 +54,43 @@ def delete_song():
     if selected_song_index:
         songs_listbox.delete(selected_song_index)
 
+def get_album_cover(song_name, n):
+    image1 = Image.open(list_of_covers[n])
+    image2=image1.resize((250, 250))
+    load = ImageTk.PhotoImage(image2)
+    
+    label1 = tkinter.Label(window, image=load)
+    label1.image = load
+    label1.place(relx=.3, rely=.06)
+
+    stripped_string = song_name[6:-4] #This is to exlude the other characters
+                                                # 6       :      -4
+                                    # Example: 'music/ | City | .wav'
+                                    # This works because the music will always be between those 2 values
+    
+    song_name_label = tkinter.Label(text = stripped_string, bg='#222222', fg='white')
+    song_name_label.place(relx=.4, rely=.6)
+
+
+def threading():
+    t1 = Thread(target=progress)
+    t1.start()
+
 def play_song():
-    selected_song_index = songs_listbox.curselection()
-    if selected_song_index:
-        song_path = songs_listbox.get(selected_song_index)
-        pygame.mixer.music.load(song_path)
-        pygame.mixer.music.play()
+    threading()
+    global n 
+    current_song = n
+    if n > 2:
+        n = 0
+    song_name = list_of_songs[n]
+    pygame.mixer.music.load(song_name)
+    pygame.mixer.music.play(loops=0)
+    pygame.mixer.music.set_volume(.5)
+    get_album_cover(song_name, n)
+
+    # print('PLAY')
+    n += 1
+
 
 def stop_song():
     pygame.mixer.music.stop()
@@ -78,6 +125,13 @@ def toggle_repeat_mode():
     else:
         repeat_mode = "Repeat All"
         repeat_button.config(image=repeat_all_img)
+
+def progress():
+    a = pygame.mixer.Sound(f'{list_of_songs[n]}')
+    song_len = a.get_length() * 3
+    for i in range(0, math.ceil(song_len)):
+        time.sleep(.4)
+        progressbar.set(pygame.mixer.music.get_pos() / 1000000)
 
 # Create the main window
 window = tk.Tk()
