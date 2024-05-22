@@ -38,7 +38,7 @@ pygame.mixer.init()
 
 #list_of_songs
 list_of_songs = [
-    'media_player/songs_listbox/02. Adele - Hello (Ringtone).mp3',
+    'test/audio_files/hard-spanish-guitar-melody_126bpm_B_minor.wav',
     'media_player/songs_listbox/08 Elastic Heart (feat. The Weeknd & Diplo).mp3'
 ]  
 
@@ -59,7 +59,7 @@ speed = 1.0
 def add_songs():
     song_paths = filedialog.askopenfilenames(
         title="Select Songs",
-        filetypes=[("MP3 Files", "*.mp3")]
+        filetypes=[("Audio Files", "*.mp3 *.wav"), ("MP3 Files", "*.mp3"), ("WAV Files", "*.wav")]
     )
     for song in song_paths:
         songs_listbox.insert(tk.END, song)
@@ -128,7 +128,7 @@ def next_song():
 
 def previous_song():
     global n
-    n -= 2
+    n -= 1
     play_song()
 
 def pause_song():

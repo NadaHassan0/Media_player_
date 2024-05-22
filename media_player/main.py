@@ -127,7 +127,7 @@ def next_song():
 
 def previous_song():
     global n
-    n -= 2
+    n -= 1
     play_song()
 
 def pause_song():
