@@ -32,6 +32,15 @@ import time
 import math
 from pydub import AudioSegment
 from pydub.playback import play
+import tkinter as tk
+from tkinter import filedialog, Menu
+from pydub import AudioSegment
+from pydub.playback import play
+import threading
+from playsound import playsound
+import tempfile
+import os
+
 
 
 pygame.mixer.init()
@@ -39,13 +48,14 @@ pygame.mixer.init()
 #list_of_songs
 list_of_songs = [
     'test/audio_files/hard-spanish-guitar-melody_126bpm_B_minor.wav',
-    'media_player/songs_listbox/08 Elastic Heart (feat. The Weeknd & Diplo).mp3'
-]  
+    'test/audio_files/paradise-lo-fi-wet-chords-gentle-loop_88bpm_F_major.wav',
+    'test/audio_files/rage-mode-type-lead-synth-loop_157bpm_D#_major.wav']
 
 #list_of_covers(jpg)
 list_of_covers = [
     'media_player/image/photo_2024-05-21_13-52-22.jpg',
-    'media_player/image/photo_2024-05-21_17-17-53.jpg'
+    'media_player/image/photo_2024-05-21_17-17-53.jpg',
+    'media_player/image/photo_2024-05-21_13-52-22.jpg'
 ]  
 
 #number of songs
@@ -87,12 +97,12 @@ def get_album_cover(song_name, n):
     song_name_label.place(relx=.10, rely=.55)
 
 
-def threading():
-    t1 = Thread(target=progress)
-    t1.start()
+#def threading():
+ #   t1 = Thread(target=progress)
+  #  t1.start()
 
 def play_song():
-    threading()
+   # threading()
     global n , is_paused
     current_song = n
     if n > 2:
@@ -105,12 +115,12 @@ def play_song():
     
     # print('PLAY')
 
-def progress():
-    a = pygame.mixer.Sound(f'{list_of_songs[n]}')
-    song_len = a.get_length() * 3
-    for i in range(0, math.ceil(song_len)):
-        time.sleep(.4)
-        progressbar.set(pygame.mixer.music.get_pos() / 1000000)
+#def progress():
+ #   a = pygame.mixer.Sound(f'{list_of_songs[n]}')
+  #  song_len = a.get_length() * 3
+   # for i in range(0, math.ceil(song_len)):
+    #    time.sleep(.4)
+     #   progressbar.set(pygame.mixer.music.get_pos() / 1000000)
 
 
 
@@ -172,10 +182,35 @@ def toggle_repeat_mode():
 
 
 
-def set_speed(value):
-    global speed
-    speed = float(value)
-    pygame.mixer.music.set_endevent(pygame.USEREVENT)
+
+def change_speed(speed):
+    global n
+    song_name = list_of_songs[n]
+    song = AudioSegment.from_file(song_name)
+    
+    # Adjust speed
+    if speed == 0.5:
+        song = song.speedup(playback_speed=0.5)
+    elif speed == 1.5:
+        song = song.speedup(playback_speed=1.5)
+    elif speed == 2:
+        song = song.speedup(playback_speed=2.0)
+    else:
+        song = AudioSegment.from_file(song_name)  # play normally
+    
+    # Save the altered song to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
+        song.export(temp_wav.name, format="wav")
+        temp_wav_path = temp_wav.name
+
+    # Play the temporary file using playsound
+    def play_temp_file():
+        playsound(temp_wav_path)
+        os.remove(temp_wav_path)
+
+    play_thread = threading.Thread(target=play_temp_file)
+    play_thread.start()
+
 
 def on_closing():
     stop_song()
@@ -196,6 +231,8 @@ controlSongMenu = Menu(myMenu)
 myMenu.add_cascade(label="Menu", menu=controlSongMenu)
 controlSongMenu.add_command(label="Add songs", command=add_songs)
 controlSongMenu.add_command(label="Deletesong", command=delete_song)
+menu_bar = Menu(window)
+window.config(menu=menu_bar)
 
 # Create a listbox to display the songs
 songs_listbox = Listbox(window, bg='#15253F', fg='white', selectbackground='#15253F', selectforeground='white')
@@ -248,9 +285,16 @@ repeat_one_img = ImageTk.PhotoImage(file='media_player/image/icons8-repeat-one-3
 repeat_button = tk.Button(window, image=repeat_all_img, command=toggle_repeat_mode, bg="#15253F", bd=0)
 repeat_button.place(relx=.75, rely=.85)
 
-speed_slider = customtkinter.CTkSlider(master=window, from_=0.5, to=2.0, command=set_speed, width=210)
-speed_slider.place(relx=0.5, rely=0.9, anchor=tkinter.CENTER)
-speed_slider.set(1.0)
+# Add a speed menu
+speed_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Speed", menu=speed_menu)
+
+# Update the menu options to call change_speed with the correct parameter
+speed_menu.add_command(label="x0.5", command=lambda: change_speed(0.5))
+speed_menu.add_command(label="x1", command=lambda: change_speed(1))
+speed_menu.add_command(label="x1.5", command=lambda: change_speed(1.5))
+speed_menu.add_command(label="x2", command=lambda: change_speed(2))
+
 
 # Start the Tkinter event loop
 window.mainloop()
