@@ -40,7 +40,16 @@ import threading
 from playsound import playsound
 import tempfile
 import os
-
+import pydub
+import numpy as np
+import scipy.signal as signal
+import sounddevice as sd
+import librosa
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
 
 pygame.mixer.init()
@@ -58,12 +67,16 @@ list_of_covers = [
     'media_player/image/photo_2024-05-21_13-52-22.jpg'
 ]  
 
-#number of songs
+#variables
 n = 0
 music_playing = False
 is_paused = False
 is_muted = False
+paused = False
 speed = 1.0
+current_position = 0
+original_duration = 0
+song_playing = False
 
 # function to add songs
 def add_songs():
@@ -101,54 +114,66 @@ def get_album_cover(song_name, n):
  #   t1 = Thread(target=progress)
   #  t1.start()
 
+# Function to play the song
 def play_song():
-   # threading()
-    global n , is_paused
-    current_song = n
-    if n > 2:
-        n = 0
-    song_name = list_of_songs[n]
-    pygame.mixer.music.load(song_name)
-    pygame.mixer.music.play(loops=0)
-    pygame.mixer.music.set_volume(.5)
-    get_album_cover(song_name, n)
-    
-    # print('PLAY')
+    global n, paused
+    if not pygame.mixer.music.get_busy() or paused:
+        song_name = list_of_songs[n]
+        pygame.mixer.music.load(song_name)
+        pygame.mixer.music.play(loops=0)
+        pygame.mixer.music.set_volume(0.5)
+        get_album_cover(song_name, n)
+        update_progress_bar()
+        paused = False
 
-#def progress():
- #   a = pygame.mixer.Sound(f'{list_of_songs[n]}')
-  #  song_len = a.get_length() * 3
-   # for i in range(0, math.ceil(song_len)):
-    #    time.sleep(.4)
-     #   progressbar.set(pygame.mixer.music.get_pos() / 1000000)
+# Function to update the progress bar
+def update_progress_bar():
+    global paused
+    while pygame.mixer.music.get_busy() and not paused:
+        song_len = pygame.mixer.Sound(list_of_songs[n]).get_length()
+        pos = pygame.mixer.music.get_pos() / 1000  # Current position in seconds
+        progress = (pos / song_len) * 100
+        pbar["value"] = progress
+        window.update()
+        time.sleep(0.1)
+    # If music is paused, simply return without updating the progress bar
+    return
 
-
-
-# function to stop song
+# Function to stop the song
 def stop_song():
-    global music_playing
-    pygame.mixer.music.stop()
-    music_playing = False
+    global play_thread, song_playing, current_position, original_duration
+    if song_playing:
+        play_thread.terminate()
+        song_playing = False
+        current_position = 0
+        original_duration = 0  # Reset the original duration
+        pygame.mixer.music.stop()  # Stop the pygame music playback
+
+# Function to pause the song
+def pause_song():
+    global play_thread, song_playing, current_position, original_duration
+    if song_playing:
+        play_thread.terminate()
+        song_playing = False
+        # Update the current position based on the new duration
+        new_duration = pydub.AudioSegment.from_file(list_of_songs[n]).duration_seconds
+        current_position = (current_position / original_duration) * new_duration
+        original_duration = new_duration  # Update the original duration
+        pygame.mixer.music.pause()  # Pause the pygame music playback
 
 
 def next_song():
     global n
-    n += 1
+    n = (n + 1) % len(list_of_songs)  # Loop around to the beginning if at the end
+    stop_song()  # Stop the current song before playing the next one
     play_song()
 
 def previous_song():
     global n
-    n -= 1
+    n = (n - 1) % len(list_of_songs)  # Loop around to the end if at the beginning
+    stop_song()  # Stop the current song before playing the previous one
     play_song()
 
-def pause_song():
-    global is_paused  
-    if is_paused:
-        pygame.mixer.music.unpause()
-        is_paused = False
-    else:
-        pygame.mixer.music.pause()
-        is_paused = True
 
 previous_volume = 0
 
@@ -184,32 +209,39 @@ def toggle_repeat_mode():
 
 
 def change_speed(speed):
-    global n
+    global play_thread, current_position, original_duration
+    stop_song()  # Stop the currently playing song
     song_name = list_of_songs[n]
-    song = AudioSegment.from_file(song_name)
+    song = pydub.AudioSegment.from_file(song_name)
     
-    # Adjust speed
+    # Store the original duration of the song
+    original_duration = song.duration_seconds
+    
     if speed == 0.5:
         song = song.speedup(playback_speed=0.5)
     elif speed == 1.5:
         song = song.speedup(playback_speed=1.5)
     elif speed == 2:
         song = song.speedup(playback_speed=2.0)
-    else:
-        song = AudioSegment.from_file(song_name)  # play normally
     
-    # Save the altered song to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
-        song.export(temp_wav.name, format="wav")
-        temp_wav_path = temp_wav.name
+    # Calculate the new current position based on the changed song duration
+    new_duration = song.duration_seconds
+    current_position = (current_position / original_duration) * new_duration
+    original_duration = new_duration  # Update the original duration
 
-    # Play the temporary file using playsound
+    temp_wav_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+    song.export(temp_wav_path, format="wav")
+
     def play_temp_file():
-        playsound(temp_wav_path)
+        audio = pydub.AudioSegment.from_wav(temp_wav_path)
+        audio = audio[int(current_position * 1000):]  # Set the position to resume playback
+        audio.export(temp_wav_path, format="wav")
+        play(pydub.AudioSegment.from_wav(temp_wav_path))
         os.remove(temp_wav_path)
 
-    play_thread = threading.Thread(target=play_temp_file)
+    play_thread = Thread(target=play_temp_file)
     play_thread.start()
+
 
 
 def on_closing():
@@ -234,6 +266,19 @@ controlSongMenu.add_command(label="Deletesong", command=delete_song)
 menu_bar = Menu(window)
 window.config(menu=menu_bar)
 
+
+# Create the menu bar
+menu_bar = Menu(window)
+window.config(menu=menu_bar)
+
+# Create a menu
+controlSongMenu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Menu", menu=controlSongMenu)
+
+# Add commands to the menu
+controlSongMenu.add_command(label="Add songs", command=add_songs)
+controlSongMenu.add_command(label="Delete song", command=delete_song)
+
 # Create a listbox to display the songs
 songs_listbox = Listbox(window, bg='#15253F', fg='white', selectbackground='#15253F', selectforeground='white')
 songs_listbox.place(relx=.5, rely=.3, relwidth=.3, relheight=.2)
@@ -243,29 +288,38 @@ for song in list_of_songs:
     songs_listbox.insert(tk.END, song)
 
 # Create buttons
+#add song button
 add_song_button = PhotoImage(file="media_player/image/icons8-add-song-100.png")
 tk.Button(window, image=add_song_button, bg="#15253F", bd=0, command=add_songs).place(x=120, y=150)
 
+# play song button
 play_button = PhotoImage(file="media_player/image/icons8-play-button-50.png")
 tk.Button(window, image=play_button, bg="#15253F", bd=0, command=play_song).place(x=375, y=500)
 
+#stop song button
 stop_button = PhotoImage(file="media_player/image/icons8-stop-circled-50.png")
 tk.Button(window, image=stop_button, bg="#15253F", bd=0, command=stop_song).place(x=300, y=500)
 
-#resume_button = PhotoImage(file="media_player/image/icons8-pause-button-50.png")
-#tk.Button(window, image=resume_button, bg="#15253F", bd=0, command=resume_song).place(x=450, y=500)
-
+#pause song button
 pause_button = PhotoImage(file="media_player/image/icons8-pause-button-50.png")
 tk.Button(window, image=pause_button, bg="#15253F", bd=0, command=pause_song).place(x=450, y=500)
 
+#next song button
 next_button = PhotoImage(file="media_player/image/icons8-forward-30.png")
 tk.Button(window, image=next_button, bg="#15253F", bd=0 ,command=next_song).place(x=520, y=510)
 
+#
 previous_button = PhotoImage(file="media_player/image/icons8-previous-30.png")
 tk.Button(window, image=previous_button, bg="#15253F", bd=0 ,command=previous_song).place(x=250, y=510)
 
-progressbar = customtkinter.CTkProgressBar(master=window, progress_color='#D0D7E1', width=570)
-progressbar.place(relx=0.5, rely=0.75, anchor=tk.CENTER)
+# Create a progress bar to indicate the current song's progress
+style = ttk.Style()
+
+# Set the theme to "alt"
+style.theme_use("alt")
+pbar =  ttk.Progressbar(window, orient="horizontal", length=500, mode="determinate", style="TProgressbar")
+pbar.pack(pady=10)
+pbar.place(relx=0.5, rely=0.75, anchor=tk.CENTER)
 
 # Create volume button
 vol_img = PhotoImage(file='media_player/image/icons8-speaker-30.png')
@@ -285,15 +339,16 @@ repeat_one_img = ImageTk.PhotoImage(file='media_player/image/icons8-repeat-one-3
 repeat_button = tk.Button(window, image=repeat_all_img, command=toggle_repeat_mode, bg="#15253F", bd=0)
 repeat_button.place(relx=.75, rely=.85)
 
-# Add a speed menu
-speed_menu = Menu(menu_bar, tearoff=0)
-menu_bar.add_cascade(label="Speed", menu=speed_menu)
-
-# Update the menu options to call change_speed with the correct parameter
+# Add a speed button
+speed_icon = PhotoImage(file="media_player/image/icons8-speed.png")
+speed_button = Label(window, image=speed_icon, bg='#15253F')
+speed_button.place(x=650, y=550, anchor=tk.CENTER)
+speed_menu = Menu(window, tearoff=0)
 speed_menu.add_command(label="x0.5", command=lambda: change_speed(0.5))
 speed_menu.add_command(label="x1", command=lambda: change_speed(1))
 speed_menu.add_command(label="x1.5", command=lambda: change_speed(1.5))
 speed_menu.add_command(label="x2", command=lambda: change_speed(2))
+speed_button.bind("<Button-1>", lambda e: speed_menu.post(e.x_root, e.y_root))
 
 
 # Start the Tkinter event loop

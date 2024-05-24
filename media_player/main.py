@@ -40,6 +40,7 @@ import threading
 from playsound import playsound
 import tempfile
 import os
+import pydub
 
 
 
@@ -58,13 +59,15 @@ list_of_covers = [
     'media_player/image/photo_2024-05-21_13-52-22.jpg'
 ]  
 
-#number of songs
+#variables
 n = 0
 music_playing = False
 is_paused = False
 is_muted = False
 paused = False
 speed = 1.0
+current_position = 0
+original_duration = 0
 
 # function to add songs
 def add_songs():
@@ -101,10 +104,6 @@ def get_album_cover(song_name, n):
 #def threading():
  #   t1 = Thread(target=progress)
   #  t1.start()
-
-n = 0  # Current song index
-paused = False
-is_paused = False
 
 # Function to play the song
 def play_song():
@@ -194,34 +193,40 @@ def toggle_repeat_mode():
 
 
 
+# Function to change the playback speed
 def change_speed(speed):
-    global n
+    global n, current_position, original_duration
+    stop_song()  # Stop the currently playing song
     song_name = list_of_songs[n]
     song = AudioSegment.from_file(song_name)
     
-    # Adjust speed
+    # Store the original duration of the song
+    original_duration = song.duration_seconds
+    
     if speed == 0.5:
         song = song.speedup(playback_speed=0.5)
     elif speed == 1.5:
         song = song.speedup(playback_speed=1.5)
     elif speed == 2:
         song = song.speedup(playback_speed=2.0)
-    else:
-        song = AudioSegment.from_file(song_name)  # play normally
     
-    # Save the altered song to a temporary file
+    # Calculate the new current position based on the changed song duration
+    new_duration = song.duration_seconds
+    current_position = (current_position / original_duration) * new_duration
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
         song.export(temp_wav.name, format="wav")
         temp_wav_path = temp_wav.name
 
-    # Play the temporary file using playsound
     def play_temp_file():
+        audio = pydub.AudioSegment.from_wav(temp_wav_path)
+        audio = audio[int(current_position * 1000):]  # Set the position to resume playback
+        audio.export(temp_wav_path, format="wav")
         playsound(temp_wav_path)
         os.remove(temp_wav_path)
 
-    play_thread = threading.Thread(target=play_temp_file)
+    play_thread = Thread(target=play_temp_file)
     play_thread.start()
-
 
 def on_closing():
     stop_song()
@@ -245,6 +250,19 @@ controlSongMenu.add_command(label="Deletesong", command=delete_song)
 menu_bar = Menu(window)
 window.config(menu=menu_bar)
 
+
+# Create the menu bar
+menu_bar = Menu(window)
+window.config(menu=menu_bar)
+
+# Create a menu
+controlSongMenu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Menu", menu=controlSongMenu)
+
+# Add commands to the menu
+controlSongMenu.add_command(label="Add songs", command=add_songs)
+controlSongMenu.add_command(label="Delete song", command=delete_song)
+
 # Create a listbox to display the songs
 songs_listbox = Listbox(window, bg='#15253F', fg='white', selectbackground='#15253F', selectforeground='white')
 songs_listbox.place(relx=.5, rely=.3, relwidth=.3, relheight=.2)
@@ -254,24 +272,27 @@ for song in list_of_songs:
     songs_listbox.insert(tk.END, song)
 
 # Create buttons
+#add song button
 add_song_button = PhotoImage(file="media_player/image/icons8-add-song-100.png")
 tk.Button(window, image=add_song_button, bg="#15253F", bd=0, command=add_songs).place(x=120, y=150)
 
+# play song button
 play_button = PhotoImage(file="media_player/image/icons8-play-button-50.png")
 tk.Button(window, image=play_button, bg="#15253F", bd=0, command=play_song).place(x=375, y=500)
 
+#stop song button
 stop_button = PhotoImage(file="media_player/image/icons8-stop-circled-50.png")
 tk.Button(window, image=stop_button, bg="#15253F", bd=0, command=stop_song).place(x=300, y=500)
 
-#resume_button = PhotoImage(file="media_player/image/icons8-pause-button-50.png")
-#tk.Button(window, image=resume_button, bg="#15253F", bd=0, command=resume_song).place(x=450, y=500)
-
+#pause song button
 pause_button = PhotoImage(file="media_player/image/icons8-pause-button-50.png")
 tk.Button(window, image=pause_button, bg="#15253F", bd=0, command=pause_song).place(x=450, y=500)
 
+#next song button
 next_button = PhotoImage(file="media_player/image/icons8-forward-30.png")
 tk.Button(window, image=next_button, bg="#15253F", bd=0 ,command=next_song).place(x=520, y=510)
 
+#
 previous_button = PhotoImage(file="media_player/image/icons8-previous-30.png")
 tk.Button(window, image=previous_button, bg="#15253F", bd=0 ,command=previous_song).place(x=250, y=510)
 
