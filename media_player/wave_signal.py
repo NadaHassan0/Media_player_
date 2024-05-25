@@ -11,7 +11,8 @@ from tkinter import filedialog, messagebox
 class AudioPlayer:
     def __init__(self, root):
         self.root = root
-        self.root.title("Audio Player with Dynamic Waveform and Frequency Spectrum")
+        self.root.title("Nano Player")
+        self.root.geometry("2000x1500")  # Set window size to 800x600
         
         self.file_path = None
         self.audio_data = None
@@ -26,8 +27,15 @@ class AudioPlayer:
         self.create_widgets()
     
     def create_widgets(self):
+        button_color = "#723C69"
+        button_width = 15
+        button_height = 3
+        button_font = ("Helvetica", 20)  # Set font size for button text
+        
         # File selection button
-        self.open_button = tk.Button(self.root, text="Open Audio File", command=self.open_file)
+        self.open_button = tk.Button(self.root, text="Open Audio File", command=self.open_file,
+                                     bg=button_color, fg="white", width=button_width, height=button_height,
+                                     font=button_font)
         self.open_button.pack(pady=10)
         
         # Create matplotlib figure and axis for waveform and spectrum
@@ -47,23 +55,37 @@ class AudioPlayer:
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=1)
         
         # Play and Stop buttons
-        self.play_button = tk.Button(self.root, text="Play", command=self.play_audio, state=tk.DISABLED)
+        self.play_button = tk.Button(self.root, text="Play", command=self.play_audio, state=tk.DISABLED,
+                                     bg=button_color, fg="white", width=button_width, height=button_height,
+                                     font=button_font)
         self.play_button.pack(side=tk.LEFT, padx=10, pady=10)
-        self.stop_button = tk.Button(self.root, text="Stop", command=self.stop_audio, state=tk.DISABLED)
+        
+        self.stop_button = tk.Button(self.root, text="Stop", command=self.stop_audio, state=tk.DISABLED,
+                                     bg=button_color, fg="white", width=button_width, height=button_height,
+                                     font=button_font)
         self.stop_button.pack(side=tk.RIGHT, padx=10, pady=10)
         
         # Speed buttons
-        self.speed_up_button = tk.Button(self.root, text="Speed x2", command=self.double_speed, state=tk.DISABLED)
+        self.speed_up_button = tk.Button(self.root, text="Speed x2", command=self.double_speed, state=tk.DISABLED,
+                                         bg=button_color, fg="white", width=button_width, height=button_height,
+                                         font=button_font)
         self.speed_up_button.pack(side=tk.LEFT, padx=10, pady=10)
-        self.speed_down_button = tk.Button(self.root, text="Speed x0.5", command=self.halve_speed, state=tk.DISABLED)
+        
+        self.speed_down_button = tk.Button(self.root, text="Speed x0.5", command=self.halve_speed, state=tk.DISABLED,
+                                           bg=button_color, fg="white", width=button_width, height=button_height,
+                                           font=button_font)
         self.speed_down_button.pack(side=tk.LEFT, padx=10, pady=10)
         
         # Low pass filter button
-        self.lowpass_button = tk.Button(self.root, text="Apply Low Pass Filter", command=self.apply_lowpass_filter, state=tk.DISABLED)
+        self.lowpass_button = tk.Button(self.root, text="Apply Low Pass Filter", command=self.apply_lowpass_filter, state=tk.DISABLED,
+                                        bg=button_color, fg="white", width=button_width, height=button_height,
+                                        font=button_font)
         self.lowpass_button.pack(side=tk.LEFT, padx=10, pady=10)
         
         # High pass filter button
-        self.highpass_button = tk.Button(self.root, text="Apply High Pass Filter", command=self.apply_highpass_filter, state=tk.DISABLED)
+        self.highpass_button = tk.Button(self.root, text="Apply High Pass Filter", command=self.apply_highpass_filter, state=tk.DISABLED,
+                                         bg=button_color, fg="white", width=button_width, height=button_height,
+                                         font=button_font)
         self.highpass_button.pack(side=tk.LEFT, padx=10, pady=10)
     
     def open_file(self):
